@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title }}</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-		<link
-			href="https://unpkg.com/prismjs@1.20.0/themes/prism-okaidia.css"
-			rel="stylesheet"
-		/></head>
+  <link href="https://unpkg.com/prismjs@1.20.0/themes/prism-okaidia.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-markdown@8.0.7/lib/react-markdown.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/remark-gfm@3.0.1/lib/remark-gfm.min.js"></script>
+</head>
 <body class="bg-gray-100 font-sans leading-relaxed">
   <header class="bg-white shadow p-4">
     <h1 class="text-2xl font-bold">{{ title }}</h1>
@@ -17,7 +19,17 @@
     </nav>
   </header>
   <main class="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow my-6">
-    {{ content | safe }}
+    <div id="content"></div>
   </main>
+  <script>
+    const content = `{{ content | safe }}`;
+    const root = ReactDOM.createRoot(document.getElementById('content'));
+    root.render(
+      React.createElement(ReactMarkdown, { 
+        children: content,
+        remarkPlugins: [window.remarkGfm]
+      })
+    );
+  </script>
 </body>
 </html>
