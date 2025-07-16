@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title }}</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
-</head>
+		<link
+			href="https://unpkg.com/prismjs@1.20.0/themes/prism-okaidia.css"
+			rel="stylesheet"
+		/></head>
 <body class="bg-gray-100 font-sans leading-relaxed">
   <header class="bg-white shadow p-4">
     <h1 class="text-2xl font-bold">{{ title }}</h1>
@@ -15,7 +17,7 @@
     </nav>
   </header>
   <main class="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow my-6">
-    {{ content | highlightCode | safe }}
+    {{ content | safe }}
   </main>
 </body>
 </html>
