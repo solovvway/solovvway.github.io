@@ -17,9 +17,10 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: npm install -g @11ty/eleventy @11ty/eleventy-plugin-syntaxhighlight
+        run: npm ci
+
       - name: Build Site
-        run: eleventy
+        run: npx eleventy
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
