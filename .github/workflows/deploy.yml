@@ -17,8 +17,7 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: npm install -g @11ty/eleventy
-
+        run: npm install -g @11ty/eleventy @11ty/eleventy-plugin-syntaxhighlight
       - name: Build Site
         run: eleventy
 
