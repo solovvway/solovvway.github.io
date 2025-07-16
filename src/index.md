@@ -1,6 +1,6 @@
 ---
 title: About Me
-layout: base.njk
+layout: index.njk
 ---
 
 # About Me
