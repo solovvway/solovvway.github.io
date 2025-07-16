@@ -1,7 +1,7 @@
 module.exports = function(eleventyConfig) {
-  eleventyConfig.addPassthroughCopy("src/posts/**/*.{jpg,png,gif}");
+  eleventyConfig.addPassthroughCopy("src/posts/*/images/*.{jpg,png,gif}");
   eleventyConfig.addCollection("posts", function(collectionApi) {
-    return collectionApi.getFilteredByGlob("src/posts/*.md");
+    return collectionApi.getFilteredByGlob("src/posts/*/*.md");
   });
   return {
     dir: {
