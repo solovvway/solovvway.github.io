@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title }}</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
 </head>
 <body class="bg-gray-100 font-sans leading-relaxed">
   <header class="bg-white shadow p-4">
@@ -14,7 +15,7 @@
     </nav>
   </header>
   <main class="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow my-6">
-    {{ content | safe }}
+    {{ content | highlightCode | safe }}
   </main>
 </body>
 </html>
