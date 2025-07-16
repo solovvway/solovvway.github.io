@@ -1,5 +1,6 @@
 ---
 title: Test post
+layout: base.njk
 ---
 
 # test h1
