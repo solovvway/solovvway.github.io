@@ -22,7 +22,7 @@
     <div id="content"></div>
   </main>
   <script>
-    const content = `{{ content | safe }}`;
+    const content = `{{ content | jsStringEscape | safe }}`;
     const root = ReactDOM.createRoot(document.getElementById('content'));
     root.render(
       React.createElement(ReactMarkdown, { 

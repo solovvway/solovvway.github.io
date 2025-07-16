@@ -1,6 +1,15 @@
 module.exports = function(eleventyConfig) {
-  // Remove or comment out the syntax highlight plugin
-  // eleventyConfig.addPlugin(require("@11ty/eleventy-plugin-syntaxhighlight"));
+  // Add escape filter for JavaScript string
+  eleventyConfig.addFilter("jsStringEscape", function(content) {
+    return content
+      .replace(/\\/g, '\\\\') // Escape backslashes
+      .replace(/`/g, '\\`')   // Escape backticks
+      .replace(/\${/g, '\\${') // Escape template literals
+      .replace(/'/g, "\\'")   // Escape single quotes
+      .replace(/"/g, '\\"')   // Escape double quotes
+      .replace(/\n/g, '\\n')  // Escape newlines
+      .replace(/\r/g, '\\r'); // Escape carriage returns
+  });
 
   // Passthrough copy for images
   eleventyConfig.addPassthroughCopy("src/posts/*/images/*.{jpg,png,gif}");
@@ -16,8 +25,7 @@ module.exports = function(eleventyConfig) {
       output: "_site",
       includes: "_includes"
     },
-    // Disable Markdown processing
-    markdownTemplateEngine: false,
+    markdownTemplateEngine: false, // Disable Markdown processing
     templateFormats: ["md", "njk", "html"]
   };
 };
