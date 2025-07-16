@@ -1,1 +1,0 @@
-# solovvway.github.io
