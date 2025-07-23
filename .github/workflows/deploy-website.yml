@@ -1,4 +1,4 @@
-name: Deploy Website to GitHub Pages
+name: Build and Deploy to GitHub Pages
 
 on:
   push:
@@ -7,29 +7,56 @@ on:
       - README.md
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
-      - name: Checkout Repository
+      - name: 🛎️ Checkout repository
         uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          show-progress: false
-      - name: Install, build, and upload site
-        uses: withastro/action@v1
+          version: 10.11.1
+
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: 📥 Install dependencies
+        run: pnpm install
+
+      - name: 🔍 Lint code
+        run: pnpm run lint
+
+      - name: 🧹 Format check
+        run: pnpm run format:check
+
+      - name: 🛠️ Build project
+        run: pnpm run build
+
+      - name: 📦 Upload build output
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ./dist
 
   deploy:
-    name: Deploy
-    needs: build
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - name: Deploy to GitHub Pages
+      - name: 🚀 Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
