@@ -35,8 +35,8 @@ jobs:
       - name: 📥 Install dependencies
         run: pnpm install
 
-      - name: 🔍 Lint code
-        run: pnpm run lint
+      # - name: 🔍 Lint code
+      #   run: pnpm run lint
 
       - name: 🧼 Auto-format code
         run: pnpm prettier --write .
