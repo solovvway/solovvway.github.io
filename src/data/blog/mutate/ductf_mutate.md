@@ -2,14 +2,14 @@
 author: Sat Naing
 pubDatetime: 2025-07-23T15:22:00Z
 modDatetime: 2025-07-13T16:52:45.934Z
-title: DownUnderCTF 2025 Mutated
+title: DownUnderCTF 2025 mutant
 slug: du-theme-mutate
 featured: false
 draft: false
 tags:
   - writeup
 description:
-  Downunder mutate task writeup.
+  Downunder mutant task writeup.
 ---
 
 The task is a DOM attribute sanitizer that also removes all tags with length 6 and 8.
