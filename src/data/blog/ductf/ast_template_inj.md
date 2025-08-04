@@ -3,7 +3,7 @@ author: Michail Solovev
 pubDatetime: 2025-07-30T15:22:00Z
 modDatetime: 2025-07-30T16:52:45.934Z
 title: DownUnderCTF 2025 AST injection problem
-slug: du-theme-mutate
+slug: du-theme-ast
 featured: false
 draft: false
 tags:
