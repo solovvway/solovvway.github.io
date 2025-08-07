@@ -4,7 +4,7 @@ author: Michail Solovev
 pubDatetime: 2025-08-07T15:22:00Z
 modDatetime: 2025-08-07T16:52:45.934Z
 title: JustCTF 2025 simple task
-slug: just-theme-simpletask
+slug: just-st-theme-simpletask
 featured: false
 draft: false
 tags:
