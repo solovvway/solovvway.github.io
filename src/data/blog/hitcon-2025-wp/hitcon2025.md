@@ -1,6 +1,6 @@
 ---
 author: Michail Solovev
-pubDatetime: 2025-08-08T15:22:00Z
+pubDatetime: 2025-09-08T15:22:00Z
 title: Hitcon 2025 wp-admin
 slug: hitcon-theme-wp-admin
 featured: false
